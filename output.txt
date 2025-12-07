@@ -1,0 +1,66 @@
+***Import an instance***
+Start locations
+@ @ @ @ @ @ @ 
+@ 0 1 . . . @ 
+@ @ @ . @ @ @ 
+@ @ @ @ @ @ @ 
+
+Goal locations
+@ @ @ @ @ @ @ 
+@ . . . 1 0 @ 
+@ @ @ . @ @ @ 
+@ @ @ @ @ @ @ 
+
+***Run CBS***
+Generate node 0
+[{'a1': 0, 'a2': 1, 'loc': [(1, 4)], 'timestep': 3}]
+[{'agent': 0, 'loc': [(1, 4)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 4)], 'timestep': 3}]
+Expand node 0
+{'cost': 6, 'constraints': [], 'paths': [[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)], [(1, 2), 
+ (1, 3), (1, 4)]], 'collisions': [{'a1': 0, 'a2': 1, 'loc': [(1, 4)], 'timestep': 3}]}
+Generate node 1
+Generate node 2
+Expand node 1
+{'cost': 7, 'constraints': [{'agent': 0, 'loc': [(1, 4)], 'timestep': 3}], 'paths': [[(1, 1), 
+ (1, 2), (1, 3), (1, 3), (1, 4), (1, 5)], [(1, 2), (1, 3), (1, 4)]], 'collisions': [{'a1': 0, 
+  'a2': 1, 'loc': [(1, 4)], 'timestep': 4}]}
+Generate node 3
+Generate node 4
+Expand node 2
+{'cost': 8, 'constraints': [{'agent': 1, 'loc': [(1, 4)], 'timestep': 3}], 'paths': [[(1, 1), 
+ (1, 2), (1, 3), (1, 4), (1, 5)], [(1, 2), (1, 3), (1, 4), (1, 3), (1, 4)]], 'collisions': 
+ [{'a1': 0, 'a2': 1, 'loc': [(1, 3), (1, 4)], 'timestep': 3}]}
+Generate node 5
+Generate node 6
+Expand node 3
+{'cost': 8, 'constraints': [{'agent': 0, 'loc': [(1, 4)], 'timestep': 3}, {'agent': 0, 'loc': 
+[(1, 4)], 'timestep': 4}], 'paths': [[(1, 1), (1, 2), (1, 3), (1, 3), (1, 3), (1, 4), (1, 5)], 
+[(1, 2), (1, 3), (1, 4)]], 'collisions': [{'a1': 0, 'a2': 1, 'loc': [(1, 4)], 'timestep': 5}]}
+Generate node 7
+Generate node 8
+Expand node 6
+{'cost': 8, 'constraints': [{'agent': 1, 'loc': [(1, 4)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 4), (1, 3)], 'timestep': 3}], 'paths': [[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)], [(1, 2), (1, 3), (1, 3), (1, 3), (1, 4)]], 'collisions': [{'a1': 0, 'a2': 1, 'loc': [(1, 3)], 'timestep': 2}]}
+Generate node 9
+Generate node 10
+Expand node 10
+{'cost': 8, 'constraints': [{'agent': 1, 'loc': [(1, 4)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 4), (1, 3)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 3)], 'timestep': 2}], 'paths': [[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)], [(1, 2), (1, 3), (1, 4), (1, 5), (1, 4)]], 'collisions': [{'a1': 0, 'a2': 1, 'loc': [(1, 4), (1, 5)], 'timestep': 4}]}
+Generate node 11
+Generate node 12
+Expand node 12
+{'cost': 8, 'constraints': [{'agent': 1, 'loc': [(1, 4)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 4), (1, 3)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 3)], 'timestep': 2}, {'agent': 1, 'loc': [(1, 5), (1, 4)], 'timestep': 4}], 'paths': [[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)], [(1, 2), (1, 3), (1, 2), (1, 3), (1, 4)]], 'collisions': [{'a1': 0, 'a2': 1, 'loc': [(1, 2), (1, 3)], 'timestep': 2}]}
+Generate node 13
+Generate node 14
+Expand node 14
+{'cost': 8, 'constraints': [{'agent': 1, 'loc': [(1, 4)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 4), (1, 3)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 3)], 'timestep': 2}, {'agent': 1, 'loc': [(1, 5), (1, 4)], 'timestep': 4}, {'agent': 1, 'loc': [(1, 3), (1, 2)], 'timestep': 2}], 'paths': [[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)], [(1, 2), (1, 2), (1, 2), (1, 3), (1, 4)]], 'collisions': [{'a1': 0, 'a2': 1, 'loc': [(1, 2)], 'timestep': 1}]}
+Generate node 15
+Generate node 16
+Expand node 16
+{'cost': 8, 'constraints': [{'agent': 1, 'loc': [(1, 4)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 4), (1, 3)], 'timestep': 3}, {'agent': 1, 'loc': [(1, 3)], 'timestep': 2}, {'agent': 1, 'loc': [(1, 5), (1, 4)], 'timestep': 4}, {'agent': 1, 'loc': [(1, 3), (1, 2)], 'timestep': 2}, {'agent': 1, 'loc': [(1, 2)], 'timestep': 1}], 'paths': [[(1, 1), (1, 2), (1, 3), (1, 4), (1, 5)], [(1, 2), (1, 3), (2, 3), (1, 3), (1, 4)]], 'collisions': []}
+
+ Found a solution! 
+
+CPU time (s):    0.00
+Sum of costs:    8
+Expanded nodes:  9
+Generated nodes: 17
+***Test paths on a simulation***
