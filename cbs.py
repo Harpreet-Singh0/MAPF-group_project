@@ -3,6 +3,7 @@ import heapq
 import random
 from single_agent_planner import compute_heuristics, a_star, get_location, get_sum_of_cost
 from CG import conflict_graph_heuristic
+from DG import dg_heuristic
 
 def detect_collision(path1, path2):
     ##############################
@@ -160,6 +161,7 @@ class CBSSolver(object):
         # compute conflict-graph heuristic and push using f = g + h    
         greedy = True
         h = conflict_graph_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics, greedy)
+        #h = dg_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics)
         
         heapq.heappush(self.open_list, (node['cost'] + h, node['cost'], len(node['collisions']), self.num_of_generated, node))
         print("Generate node {} (g={}, h={})".format(self.num_of_generated, node.get('cost', 0), h))
@@ -169,6 +171,7 @@ class CBSSolver(object):
     def pop_node(self):
         _, _, _, id, node = heapq.heappop(self.open_list)
         print("Expand node {}".format(id))
+        
         self.num_of_expanded += 1
         return node
 
