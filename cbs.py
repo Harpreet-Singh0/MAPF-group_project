@@ -4,6 +4,7 @@ import random
 from single_agent_planner import compute_heuristics, a_star, get_location, get_sum_of_cost
 from CG import conflict_graph_heuristic
 from DG import dg_heuristic
+from WDG import wdg_heuristic
 
 def detect_collision(path1, path2):
     ##############################
@@ -157,12 +158,17 @@ class CBSSolver(object):
             self.heuristics.append(compute_heuristics(my_map, goal))
 
     def push_node(self, node):
+        #h = 0
+        # compute conflict-graph heuristic and push using f = g + h  
 
-        # compute conflict-graph heuristic and push using f = g + h    
-        greedy = True
-        h = conflict_graph_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics, greedy)
+        #h = conflict_graph_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics, greedy=True)  
+
+        #h = conflict_graph_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics, greedy=False)
+
         #h = dg_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics)
-        
+
+        h = wdg_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics)
+               
         heapq.heappush(self.open_list, (node['cost'] + h, node['cost'], len(node['collisions']), self.num_of_generated, node))
         print("Generate node {} (g={}, h={})".format(self.num_of_generated, node.get('cost', 0), h))
         self.num_of_generated += 1
@@ -179,6 +185,7 @@ class CBSSolver(object):
         """ Finds paths for all agents from their start locations to their goal locations
 
         disjoint    - use disjoint splitting or not
+        
         """
 
         self.start_time = timer.time()

@@ -3,6 +3,14 @@ from single_agent_planner import a_star, is_constrained, build_constraint_table,
 
 
 def build_MDD(my_map, start, goal, agent, heuristics, constraints):
+    """Build a multi-valued decision diagram (MDD) for `agent` from `start` to `goal` within `max_cost`.
+
+    An MDD is a leveled graph where each level contains the possible locations of the agent at that
+    time step, given the constraints. Each node at level t is connected to nodes at level t+1 if
+    the agent can move between those locations without violating any constraints.
+
+    Returns the MDD as a list of levels, where each level is a set of locations.
+    """
     c_table = build_constraint_table(constraints, agent)
     path = a_star(my_map, start, goal, heuristics, agent, constraints)
     
