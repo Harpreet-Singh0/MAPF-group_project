@@ -1,18 +1,42 @@
 import heapq
 
-from single_agent_planner import compute_heuristics, a_star, get_sum_of_cost
+from single_agent_planner import a_star, get_sum_of_cost
 from CG import conflict_graph_heuristic
 from DG import build_dependency_graph
 
+# Module-level cache
+#joint_min_sum_cache = {}   # key -> min sum-of-costs for agent pair
+#
+#def joint_cache_get(i, j, start1, goal1, start2, goal2, constraints):
+#    agents_key = (min(i, j), max(i, j))
+#    ckey = normalize_constraints_key(constraints, agents=[i, j])
+#    key = (agents_key, start1, goal1, start2, goal2, ckey)
+#    return joint_min_sum_cache.get(key)
+#
+#def joint_cache_set(i, j, start1, goal1, start2, goal2, constraints, value):
+#    agents_key = (min(i, j), max(i, j))
+#    ckey = normalize_constraints_key(constraints, agents=[i, j])
+#    key = (agents_key, start1, goal1, start2, goal2, ckey)
+#    joint_min_sum_cache[key] = value
+#
+#def clear_wdg_caches():
+#    """Clear the caches used by WDG (safe to call between runs/tests)."""
+#    
+#    joint_min_sum_cache.clear()
 
-def _joint_min_sum(node, my_map, start1, goal1, start2, goal2, agent1, agent2, heur1, heur2, constraints):
+def joint_min_sum(node, my_map, start1, goal1, start2, goal2, agent1, agent2, heur1, heur2, constraints):
     """Compute minimal joint sum of costs for agents agent1 and agent2 by running
     a two-agent CBS (using CG greedy matching heuristic) that respects the given
     high-level `constraints` (filtered to these two agents).
 
     Returns integer sum-of-costs or None if infeasible.
     """
-    from cbs import detect_collisions, disjoint_splitting
+    # check cache first
+    #cached = joint_cache_get(agent1, agent2, start1, goal1, start2, goal2, constraints)
+    #if cached is not None:
+    #    return cached
+    
+    from cbs import detect_collisions, disjoint_splitting    # import here to avoid circular import
     # filter constraints for the two agents only
     filtered_constraints = [c for c in node['constraints'] if c['agent'] == agent1 or c['agent'] == agent2]
     # run CBS with CG heuristic in greedy mode
@@ -23,14 +47,18 @@ def _joint_min_sum(node, my_map, start1, goal1, start2, goal2, agent1, agent2, h
             self.goals = goals
             self.heuristics = heuristics
             self.open_list = []
+            import itertools
+            # persistent counter per instance so heap entries never fall back to comparing dicts
+            self.counter = itertools.count()
 
         def push_node(self, node):
             # compute conflict-graph heuristic and push using f = g + h  
             greedy = True
             h = conflict_graph_heuristic(node, self.my_map, self.starts, self.goals, self.heuristics, greedy)  
-            heapq.heappush(self.open_list, (node['cost'] + h, node['cost'], len(node['collisions']), node))
+            heapq.heappush(self.open_list, (node['cost'] + h, node['cost'], len(node['collisions']), next(self.counter), node))
 
         def find_solution(self, constraints):
+            # run CBSH until solution found
             root = {'cost': 0, 'paths': [], 'collisions': [], 'constraints': constraints}
             
             for i in range(2):
@@ -43,7 +71,7 @@ def _joint_min_sum(node, my_map, start1, goal1, start2, goal2, agent1, agent2, h
             self.push_node(root)
 
             while len(self.open_list) > 0:
-                (_, _, _, node) = heapq.heappop(self.open_list)
+                (_, _, _, _, node) = heapq.heappop(self.open_list)
                 if len(node['collisions']) == 0:
                     return node['cost']
                 collision = node['collisions'][0]
@@ -67,7 +95,10 @@ def _joint_min_sum(node, my_map, start1, goal1, start2, goal2, agent1, agent2, h
                 
 
     cbs = TwoAgentCBS(my_map, [start1, start2], [goal1, goal2], [heur1, heur2])
-    return cbs.find_solution(filtered_constraints)
+    result = cbs.find_solution(filtered_constraints)
+    # store in cache
+    #joint_cache_set(agent1, agent2, start1, goal1, start2, goal2, constraints, result)
+    return result
     
 
 
@@ -89,7 +120,7 @@ def build_weighted_dependency_graph(node, my_map, starts, goals, heuristics):
         for j in range(i + 1, num_of_agents):
             if j not in dg[i]:
                 continue
-            min_joint = _joint_min_sum(node, my_map, starts[i], goals[i], starts[j], goals[j], i, j,
+            min_joint = joint_min_sum(node, my_map, starts[i], goals[i], starts[j], goals[j], i, j,
                                        heuristics[i], heuristics[j], node['constraints'])
             if min_joint is None:
                 # treat as high weight (infeasible) — use a large number
@@ -103,12 +134,11 @@ def build_weighted_dependency_graph(node, my_map, starts, goals, heuristics):
     return wdg
 
 
-def _min_cost_vertex_cover_from_wdg(wdg):
+def min_cost_vertex_cover_from_wdg(wdg):
     """Compute minimum-cost vertex cover where vertex cost = sum of incident edge weights.
 
     Uses brute-force/backtracking; returns minimal total vertex cost covering all edges.
     """
-    
     vertices = list(wdg.keys())
     edges = []
     v_weight = {v: 0 for v in vertices}
@@ -122,12 +152,14 @@ def _min_cost_vertex_cover_from_wdg(wdg):
     min_cover = vertices
 
     def all_edges_covered(covered, edges):
+        # check if all edges are covered by the current set of vertices
         for (u, v, w) in edges:
             if u not in covered and v not in covered:
                 return False
         return True
 
     def backtrack(covered, edges, idx, min_cover, vertices, wdg):
+        """Backtracking helper function to compute minimum-cost vertex cover size."""
         if all_edges_covered(covered, edges):
             total_weight = sum(v_weight[v] for v in covered)
             if total_weight < sum(v_weight[v] for v in min_cover):
@@ -165,4 +197,4 @@ def wdg_heuristic(node, my_map, starts, goals, heuristics):
     Return the WDG heuristic value: the minimum-cost vertex cover value derived from WDG.
     """
     wdg = build_weighted_dependency_graph(node, my_map, starts, goals, heuristics)
-    return _min_cost_vertex_cover_from_wdg(wdg)
+    return min_cost_vertex_cover_from_wdg(wdg)

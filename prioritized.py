@@ -35,19 +35,11 @@ class PrioritizedPlanningSolver(object):
                           i, constraints)
             if path is None:
                 raise BaseException('No solutions')
-            # Check if path is longer than the upper bound
-            ## Upper bound is defined as: length of optimal path for current agent(heuristic value) + number of higher 
-            ## priority agents * size of the map (worst case scenario) 
+
             if len(path) > self.heuristics[i][self.goals[i]] + (i-1)*len(self.my_map[0])*len(self.my_map):
                 raise BaseException('No solutions')
             result.append(path)
 
-            ##############################
-            # Task 2: Add constraints here
-            #         Useful variables:
-            #            * path contains the solution path of the current (i'th) agent, e.g., [(1,1),(1,2),(1,3)]
-            #            * self.num_of_agents has the number of total agents
-            #            * constraints: array of constraints to consider for future A* searches
             for t in range(len(path)):
                 for j in range(i + 1, self.num_of_agents):
                     # Vertex constraint
@@ -68,8 +60,6 @@ class PrioritizedPlanningSolver(object):
                                                 'loc': [path[t]],
                                                 'timestep': future_t,
                                                 'positive': False})
-
-            ##############################
 
         self.CPU_time = timer.time() - start_time
 

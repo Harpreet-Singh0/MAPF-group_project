@@ -1,4 +1,5 @@
 import heapq
+import functools
 
 def move(loc, dir):
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
@@ -13,7 +14,7 @@ def get_sum_of_cost(paths):
 
 
 def compute_heuristics(my_map, goal):
-    # Use Dijkstra to build a shortest-path tree rooted at the goal location
+    """Use Dijkstra to build a shortest-path tree rooted at the goal location"""
     open_list = []
     closed_list = dict()
     root = {'loc': goal, 'cost': 0}
@@ -34,7 +35,6 @@ def compute_heuristics(my_map, goal):
                 existing_node = closed_list[child_loc]
                 if existing_node['cost'] > child_cost:
                     closed_list[child_loc] = child
-                    # open_list.delete((existing_node['cost'], existing_node['loc'], existing_node))
                     heapq.heappush(open_list, (child_cost, child_loc, child))
             else:
                 closed_list[child_loc] = child
@@ -48,11 +48,7 @@ def compute_heuristics(my_map, goal):
 
 
 def build_constraint_table(constraints, agent):
-    ##############################
-    # Task 1.2/1.3: Return a table that contains the list of constraints of
-    #               the given agent for each time step. The table can be used
-    #               for a more efficient constraint violation check in the 
-    #               is_constrained function.
+    """Build constraint table for the given agent from the list of constraints."""
     constraint_table = dict()
     for constraint in constraints:
         if constraint['agent'] == agent:
@@ -83,10 +79,6 @@ def get_path(goal_node):
 
 
 def is_constrained(curr_loc, next_loc, next_time, constraint_table):
-    ##############################
-    # Task 1.2/1.3: Check if a move from curr_loc to next_loc at time step next_time violates
-    #               any given constraint. For efficiency the constraints are indexed in a constraint_table
-    #               by time step, see build_constraint_table.
     if next_time in constraint_table:
         for constraint in constraint_table[next_time]:
             if constraint['loc'] == [next_loc]:
@@ -116,6 +108,188 @@ def compare_nodes(n1, n2):
     """Return true is n1 is better than n2."""
     return n1['g_val'] + n1['h_val'] < n2['g_val'] + n2['h_val']
 
+# LAZY A* IMPLEMENTATION
+
+def memoize(func):
+    """Generic memoization decorator."""
+    cache = {}
+    
+    @functools.wraps(func)
+    def memoized_func(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+    
+    return memoized_func
+
+
+class LazyAStarSolver:
+    """A* with lazy heuristic evaluation and memoization."""
+    
+    def __init__(self, my_map, start_loc, goal_loc, heuristic_generator, agent, constraints):
+        self.my_map = my_map
+        self.start_loc = start_loc
+        self.goal_loc = goal_loc
+        self.heuristic_generator = heuristic_generator  # Function to compute heuristics if needed
+        self.agent = agent
+        self.constraints = constraints
+        
+        # Cache for computed heuristics
+        self.heuristic_cache = {}
+        # Cache for constraint tables
+        self.constraint_table_cache = None
+        
+    def get_heuristic(self, loc):
+        """Get heuristic value with lazy evaluation and caching."""
+        if loc not in self.heuristic_cache:
+            # Compute heuristics lazily only when needed
+            self.heuristic_cache[loc] = self.heuristic_generator(loc, self.goal_loc)
+        return self.heuristic_cache[loc]
+    
+    def get_constraint_table(self):
+        """Get constraint table with caching."""
+        if self.constraint_table_cache is None:
+            self.constraint_table_cache = build_constraint_table(self.constraints, self.agent)
+        return self.constraint_table_cache
+    
+    def is_constrained_lazy(self, curr_loc, next_loc, next_time):
+        """Check constraints using cached constraint table."""
+        constraint_table = self.get_constraint_table()
+        
+        if next_time in constraint_table:
+            for constraint in constraint_table[next_time]:
+                if constraint['loc'] == [next_loc]:
+                    return constraint['positive'] is False
+                if constraint['loc'] == [curr_loc, next_loc]:
+                    return constraint['positive'] is False
+        return False
+    
+    def lazy_a_star(self):
+        """Lazy A* search with memoization."""
+        open_list = []
+        closed_list = {}
+        
+        # Initial heuristic is computed lazily
+        h_start = self.get_heuristic(self.start_loc)
+        root = {
+            'loc': self.start_loc,
+            'g_val': 0,
+            'h_val': h_start,
+            'timestep': 0,
+            'parent': None
+        }
+        
+        self.push_node_lazy(open_list, root)
+        closed_list[(root['loc'], 0)] = root
+        
+        while open_list:
+            curr = self.pop_node_lazy(open_list)
+            
+            # Goal test with lazy constraint checking
+            if curr['loc'] == self.goal_loc:
+                # Check if goal is constrained at any future timestep
+                goal_constrained = False
+                constraint_table = self.get_constraint_table()
+                for t in range(curr['timestep'], curr['timestep'] + 50):
+                    if t in constraint_table:
+                        for constraint in constraint_table[t]:
+                            if constraint['loc'] == [self.goal_loc] and constraint['positive'] is False:
+                                goal_constrained = True
+                                break
+                    if goal_constrained:
+                        break
+                
+                if not goal_constrained:
+                    return get_path(curr)
+            
+            # Generate successors with lazy heuristic evaluation
+            for dir in range(4):
+                child_loc = move(curr['loc'], dir)
+                
+                # Check bounds and obstacles
+                if (child_loc[0] < 0 or child_loc[0] >= len(self.my_map) or
+                    child_loc[1] < 0 or child_loc[1] >= len(self.my_map[0]) or
+                    self.my_map[child_loc[0]][child_loc[1]]):
+                    continue
+                
+                # Check constraints lazily
+                if self.is_constrained_lazy(curr['loc'], child_loc, curr['timestep'] + 1):
+                    continue
+                
+                # Lazy heuristic computation
+                h_child = self.get_heuristic(child_loc)
+                
+                child = {
+                    'loc': child_loc,
+                    'g_val': curr['g_val'] + 1,
+                    'h_val': h_child,
+                    'timestep': curr['timestep'] + 1,
+                    'parent': curr
+                }
+                
+                self.update_or_add_node(open_list, closed_list, child)
+            
+            # Wait action with lazy constraint checking
+            if not self.is_constrained_lazy(curr['loc'], curr['loc'], curr['timestep'] + 1):
+                h_wait = self.get_heuristic(curr['loc'])
+                
+                wait_child = {
+                    'loc': curr['loc'],
+                    'g_val': curr['g_val'] + 1,
+                    'h_val': h_wait,
+                    'timestep': curr['timestep'] + 1,
+                    'parent': curr
+                }
+                
+                self.update_or_add_node(open_list, closed_list, wait_child)
+        
+        return None
+    
+    def push_node_lazy(self, open_list, node):
+        """Push node to open list with lazy f-value computation."""
+        f_val = node['g_val'] + node['h_val']
+        heapq.heappush(open_list, (f_val, node['h_val'], node['loc'], node['timestep'], node))
+    
+    def pop_node_lazy(self, open_list):
+        """Pop node from open list."""
+        _, _, _, _, node = heapq.heappop(open_list)
+        return node
+    
+    def update_or_add_node(self, open_list, closed_list, node):
+        """Update existing node or add new node with lazy comparison."""
+        key = (node['loc'], node['timestep'])
+        
+        if key in closed_list:
+            existing = closed_list[key]
+            # Compare nodes lazily (only when needed)
+            if (node['g_val'] + node['h_val']) < (existing['g_val'] + existing['h_val']):
+                closed_list[key] = node
+                self.push_node_lazy(open_list, node)
+        else:
+            closed_list[key] = node
+            self.push_node_lazy(open_list, node)
+
+
+def a_star_lazy(my_map, start_loc, goal_loc, h_values, agent, constraints):
+    """Lazy A* wrapper that uses the LazyAStarSolver."""
+    # Create a heuristic generator function
+    def heuristic_generator(loc, goal):
+        if loc in h_values:
+            return h_values[loc]
+        # Fallback: Manhattan distance if not in precomputed heuristics
+        return abs(loc[0] - goal[0]) + abs(loc[1] - goal[1])
+    
+    solver = LazyAStarSolver(
+        my_map, 
+        start_loc, 
+        goal_loc,
+        heuristic_generator,
+        agent,
+        constraints
+    )
+    return solver.lazy_a_star()
+
 
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     """ my_map      - binary obstacle map
@@ -124,10 +298,8 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
         agent       - the agent that is being re-planned
         constraints - constraints defining where robot should or cannot go at each timestep
     """
-
-    ##############################
-    # Task 1.1: Extend the A* search to search in the space-time domain
-    #           rather than space domain, only.
+    from CG import conflict_graph_heuristic     # Pulling in here to avoid circular import
+    from WDG import wdg_heuristic               #
 
     open_list = []
     closed_list = dict()
@@ -143,8 +315,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     constraint_table = build_constraint_table(constraints, agent)
     while len(open_list) > 0:
         curr = pop_node(open_list)
-        #############################
-        # Task 1.4: Adjust the goal test condition to handle goal constraints
+        # check if reached goal location
         for t in range(curr['timestep'], curr['timestep'] + 50):
             if is_constrained(goal_loc, goal_loc, t, constraint_table):
                 goal_constrained = True

@@ -25,6 +25,7 @@ def build_MDD(my_map, start, goal, agent, heuristics, constraints):
     open_list.append(root)
     closed_list.add(root)
 
+    # BFS on MDD
     while open_list:
         curr, t = open_list.popleft()
         if t > min_cost:
@@ -38,17 +39,17 @@ def build_MDD(my_map, start, goal, agent, heuristics, constraints):
         else:
             if curr not in mdd['layers'][t]:
                 mdd['layers'][t].append(curr)
-        
+        # check if goal is constrained in future timesteps
         for time in range(t, t + 50):
             if is_constrained(goal, goal, time, c_table):
                 goal_constrained = True
                 break
             else:
                 goal_constrained = False
-
+        # check for termination
         if curr == goal and t == min_cost and not goal_constrained:
             return mdd
-
+        # expand to successors
         for dir in range(4):
             loc = move(curr, dir)
             if loc[0] < 0 or loc[0] >= len(my_map) or \
@@ -90,7 +91,9 @@ def get_constraint_for_agent(collision, agent):
 				
 
 def is_cardinal(collision, node, my_map, starts, goals, heuristics):
-    
+    """Check if the given `collision` is a cardinal conflict based on whether both agents' path costs
+        increase when replanning with the corresponding constraint added.
+    """
     a1 = collision['a1']
     a2 = collision['a2']
     
@@ -117,6 +120,9 @@ def is_cardinal(collision, node, my_map, starts, goals, heuristics):
     return increased1 and increased2
 
 def is_cardinal_from_mdd(collision, mdd1, mdd2):
+    """Check if the given `collision` is a cardinal conflict based on whether both agents are
+        constrained to a single location at the collision timestep in their MDDs.
+    """
     loc = collision['loc']
     t = collision['timestep']
     
@@ -157,7 +163,7 @@ def is_cardinal_from_mdd(collision, mdd1, mdd2):
         
 
 def build_conflict_graph(node, my_map, starts, goals, heuristics):
-    
+    """Build the conflict graph (CG) for the high-level `node`."""
     num_agents = len(starts)
     adj = {i: set() for i in range(num_agents)}
     for collision in node['collisions']:
@@ -241,7 +247,6 @@ def get_minimum_vertex_cover_size(adj):
     
     This function uses a backtracking approach to find the minimum vertex cover.
     """
-    
     vertices = list(adj.keys())
     edges = []
     for u in adj:

@@ -3,6 +3,32 @@ from collections import deque
 from single_agent_planner import build_constraint_table, is_constrained, move
 from CG import build_MDD, get_minimum_vertex_cover_size
 
+# Module-level caches
+#mdd_cache = {}             # key -> MDD for a single agent under constraints
+#joint_min_sum_cache = {}   # key -> min sum-of-costs for agent pair
+#
+#def normalize_constraints_key(constraints, agents=None):
+#    """
+#    Turn constraints list into a canonical tuple key.
+#    If 'agents' is provided (iterable), only include constraints for those agents.
+#    """
+#    items = []
+#    for c in constraints:
+#        if agents is not None and c['agent'] not in agents:
+#            continue
+#        # turn loc list into tuple-of-tuples to be hashable
+#        loc_tuple = tuple(tuple(l) for l in c['loc'])
+#        items.append((c['agent'], loc_tuple, c['timestep'], bool(c.get('positive', False))))
+#    items.sort()
+#    return tuple(items)
+#
+#def mdd_cache_get(agent, start, goal, constraints):
+#    key = (agent, start, goal, normalize_constraints_key(constraints, agents=[agent]))
+#    return mdd_cache.get(key)
+#
+#def mdd_cache_set(agent, start, goal, constraints, mdd):
+#    key = (agent, start, goal, normalize_constraints_key(constraints, agents=[agent]))
+#    mdd_cache[key] = mdd
 
 def extend_mdd(mdd, T):
 	"""Extend MDD dict (t->set(locs)) to depth T by repeating last level (goal waits).
@@ -46,6 +72,14 @@ def pair_has_joint_path(my_map, start1, goal1, start2, goal2, agent1, agent2, he
 	perform a BFS on the product (loc1, loc2, t) for t=0..T (T = max depth).
 	"""
 	# build MDDs for both agents under the same set of high-level constraints
+	#mdd1 = mdd_cache_get(agent1, start1, goal1, constraints)
+	#if mdd1 is None:
+	#	mdd1 = build_MDD(my_map, start1, goal1, agent1, heur1, constraints)
+	#	mdd_cache_set(agent1, start1, goal1, constraints, mdd1)
+	#mdd2 = mdd_cache_get(agent2, start2, goal2, constraints)
+	#if mdd2 is None:
+	#	mdd2 = build_MDD(my_map, start2, goal2, agent2, heur2, constraints)
+	#	mdd_cache_set(agent2, start2, goal2, constraints, mdd2)
 	mdd1 = build_MDD(my_map, start1, goal1, agent1, heur1, constraints)
 	mdd2 = build_MDD(my_map, start2, goal2, agent2, heur2, constraints)
 	if mdd1 is None or mdd2 is None:
@@ -93,7 +127,7 @@ def pair_has_joint_path(my_map, start1, goal1, start2, goal2, agent1, agent2, he
 				if new_state not in closed_list:
 					closed_list.add(new_state)
 					open_list.append(new_state)
-	print(joint_MDD)
+	
 	return False
 
 def build_dependency_graph(node, my_map, starts, goals, heuristics):
